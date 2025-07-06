@@ -90,6 +90,30 @@ FLUSH PRIVILEGES;
 EOF
 }
 
+install_phpmyadmin() {
+  echo "=== Установка phpMyAdmin ==="
+  apt --no-install-recommends install -y phpmyadmin
+  cat > /etc/nginx/conf.d/phpmyadmin.conf <<EOF
+location /phpmyadmin {
+    root /usr/share/;
+    index index.php index.html index.htm;
+    location ~ ^/phpmyadmin/(.+\.php)$ {
+        try_files \$uri =404;
+        root /usr/share/;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+    location ~* ^/phpmyadmin/(.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt))\$ {
+        root /usr/share/;
+    }
+}
+EOF
+
+  systemctl reload nginx
+}
+
 check_root
 
 echo "Выберите режим:"
@@ -108,7 +132,7 @@ configure_ufw
 case "$MODE" in
   1) install_php_composer ;;
   2) install_nodejs ;;
-  3) install_php_composer; install_mariadb ;;
+  3) install_php_composer; install_mariadb; install_phpmyadmin ;;
   *) echo "Неверный режим"; exit 1 ;;
 esac
 
