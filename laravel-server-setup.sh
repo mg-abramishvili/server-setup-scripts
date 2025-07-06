@@ -37,7 +37,7 @@ ufw allow 'Nginx Full'
 ufw --force enable
 
 echo "=== Устанавливаем PHP 8.2 и необходимые модули ==="
-apt install -y php php-{common,fpm,mysql,zip,gd,mbstring,curl,xml,bcmath}
+apt install -y php php-common php-fpm php-mysql php-sqlite3 php-zip php-gd php-mbstring php-curl php-xml php-bcmath
 
 echo "=== Настраиваем PHP параметры ==="
 PHP_INI=$(php --ini | grep "Loaded Configuration" | awk '{print $NF}')
@@ -46,10 +46,6 @@ sed -i "s/^max_input_time = .*/max_input_time = 600/" "$PHP_INI"
 sed -i "s/^memory_limit = .*/memory_limit = 1G/" "$PHP_INI"
 sed -i "s/^post_max_size = .*/post_max_size = 512M/" "$PHP_INI"
 sed -i "s/^upload_max_filesize = .*/upload_max_filesize = 512M/" "$PHP_INI"
-
-for ext in fileinfo pdo_mysql pdo_sqlite; do
-  grep -q "^extension=$ext" "$PHP_INI" || echo "extension=$ext" >> "$PHP_INI"
-done
 
 systemctl restart php*-fpm
 
