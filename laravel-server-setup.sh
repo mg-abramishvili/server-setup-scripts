@@ -45,12 +45,12 @@ create_admin_user() {
 
 remove_apache() {
   echo "=== Удаление Apache ==="
-  apt purge -y apache2 apache2-utils apache2-bin libapache2-mod-php* || true
+  apt purge -y apache2
   apt autoremove -y
   apt autoclean
 }
 
-install_php_composer() {
+install_php() {
   echo "=== Устанавка PHP и Composer ==="
   apt install -y php php-common php-fpm php-mysql php-sqlite3 php-zip php-gd php-mbstring php-curl php-xml php-bcmath curl unzip
   PHP_INI=$(php --ini | grep "Loaded Configuration" | awk '{print $NF}')
@@ -59,8 +59,11 @@ install_php_composer() {
   sed -i "s/^memory_limit = .*/memory_limit = 1G/" "$PHP_INI"
   sed -i "s/^post_max_size = .*/post_max_size = 512M/" "$PHP_INI"
   sed -i "s/^upload_max_filesize = .*/upload_max_filesize = 512M/" "$PHP_INI"
-  systemctl restart php*-fpm
+  
+  systemctl restart php8.2-fpm
+}
 
+install_composer() {
   cd /tmp
   curl -sS https://getcomposer.org/installer -o composer-setup.php
   php composer-setup.php --install-dir=/usr/local/bin --filename=composer
@@ -93,24 +96,35 @@ EOF
 install_phpmyadmin() {
   echo "=== Установка phpMyAdmin ==="
   apt --no-install-recommends install -y phpmyadmin
-  cat > /etc/nginx/conf.d/phpmyadmin.conf <<EOF
-location /phpmyadmin {
-    root /usr/share/;
+  NGINX_CONF="/etc/nginx/sites-available/phpmyadmin"
+  cat > "$NGINX_CONF" <<'EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    root /usr/share/phpmyadmin;
     index index.php index.html index.htm;
-    location ~ ^/phpmyadmin/(.+\.php)$ {
-        try_files \$uri =404;
-        root /usr/share/;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        include fastcgi_params;
+
+    server_name _;
+
+    location / {
+        try_files $uri $uri/ =404;
     }
-    location ~* ^/phpmyadmin/(.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt))\$ {
-        root /usr/share/;
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires max;
+        log_not_found off;
     }
 }
 EOF
 
+  ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/phpmyadmin
+  rm -f /etc/nginx/sites-enabled/default
   systemctl reload nginx
 }
 
@@ -130,9 +144,9 @@ install_nginx
 configure_ufw
 
 case "$MODE" in
-  1) install_php_composer ;;
+  1) install_php; install_composer ;;
   2) install_nodejs ;;
-  3) install_php_composer; install_mariadb; install_phpmyadmin ;;
+  3) install_php; install_mariadb; install_phpmyadmin ;;
   *) echo "Неверный режим"; exit 1 ;;
 esac
 
