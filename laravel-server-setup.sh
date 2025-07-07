@@ -95,28 +95,32 @@ EOF
 
 install_phpmyadmin() {
   echo "=== Установка phpMyAdmin ==="
-  apt --no-install-recommends install -y phpmyadmin
+
+  export DEBIAN_FRONTEND=noninteractive
+  apt install -y --no-install-recommends phpmyadmin
+
+  rm -f /etc/apache2/conf-enabled/phpmyadmin.conf
+
+  echo "=== Настройка Nginx для phpMyAdmin ==="
   NGINX_CONF="/etc/nginx/sites-available/phpmyadmin"
-  cat > "$NGINX_CONF" <<'EOF'
+  cat > "$NGINX_CONF" <<EOF
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 80;
+    server_name _;
 
     root /usr/share/phpmyadmin;
     index index.php index.html index.htm;
 
-    server_name _;
-
     location / {
-        try_files $uri $uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
 
-    location ~ \.php$ {
+    location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.2-fpm.sock;
     }
 
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)\$ {
         expires max;
         log_not_found off;
     }
