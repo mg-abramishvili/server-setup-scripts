@@ -11,7 +11,7 @@ check_root() {
 update_system() {
   echo "=== Обновление системы ==="
   apt update && apt upgrade -y
-  apt install curl unzip
+  apt install -y curl unzip
 }
 
 install_nginx() {
