@@ -31,6 +31,7 @@ configure_ufw() {
   apt install -y ufw
   ufw allow OpenSSH
   ufw allow 'Nginx Full'
+  ufw allow 3306/tcp
   ufw --force enable
 }
 
