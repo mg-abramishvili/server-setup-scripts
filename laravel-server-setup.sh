@@ -8,6 +8,12 @@ check_root() {
   fi
 }
 
+update_system() {
+  echo "=== Обновление системы ==="
+  apt update && apt upgrade -y
+  apt install curl unzip
+}
+
 install_nginx() {
   echo "=== Установка Nginx ==="
   apt install -y nginx
@@ -50,9 +56,14 @@ remove_apache() {
   apt autoclean
 }
 
+install_git() {
+  echo "=== Устанавка Git ==="
+  apt install -y git
+}
+
 install_php() {
   echo "=== Устанавка PHP и Composer ==="
-  apt install -y php php-common php-fpm php-mysql php-sqlite3 php-zip php-gd php-mbstring php-curl php-xml php-bcmath curl unzip
+  apt install -y php php-common php-fpm php-mysql php-sqlite3 php-zip php-gd php-mbstring php-curl php-xml php-bcmath
   PHP_INI=$(php --ini | grep "Loaded Configuration" | awk '{print $NF}')
   sed -i "s/^max_execution_time = .*/max_execution_time = 300/" "$PHP_INI"
   sed -i "s/^max_input_time = .*/max_input_time = 600/" "$PHP_INI"
@@ -140,12 +151,10 @@ echo "2. Frontend Server (Node.js)"
 echo "3. Database Server (PHP + MariaDB)"
 read -p "Введите номер режима (1/2/3): " MODE
 
-echo "=== Обновление системы ==="
-apt update && apt upgrade -y
-
-remove_apache
+update_system
 install_nginx
 configure_ufw
+install_git
 
 case "$MODE" in
   1) install_php; install_composer ;;
@@ -154,6 +163,7 @@ case "$MODE" in
   *) echo "Неверный режим"; exit 1 ;;
 esac
 
+remove_apache
 create_admin_user
 configure_ssh
 
